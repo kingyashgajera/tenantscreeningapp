@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tenant Screening Application</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.22.9/babel.min.js"></script>
+</head>
+<body class="bg-gray-100">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const FunnelStep = ({ title, children, onNext, onBack, step, totalSteps }) => (
+            <div class="max-w-2xl mx-auto p-6 bg-white rounded-lg shadow-md mt-10">
+                <h2 class="text-2xl font-bold mb-4">{title}</h2>
+                <div class="mb-6">{children}</div>
+                <div class="flex justify-between">
+                    {step > 1 && (
+                        <button
+                            onClick={onBack}
+                            class="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400"
+                        >
+                            Back
+                        </button>
+                    )}
+                    <button
+                        onClick={onNext}
+                        class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+                    >
+                        {step === totalSteps ? 'Submit' : 'Next'}
+                    </button>
+                </div>
+                <p class="text-sm text-gray-500 mt-4">
+                    Step {step} of {totalSteps} | Secure & Compliant with Illinois Laws
+                </p>
+            </div>
+        );
+
+        const SignatureCanvas = () => {
+            const canvasRef = useRef(null);
+            let isDrawing = false;
+
+            useEffect(() => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                ctx.lineWidth = 2;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = 'black';
+
+                const startDrawing = (e) => {
+                    isDrawing = true;
+                    const { offsetX, offsetY } = e.nativeEvent;
+                    ctx.beginPath();
+                    ctx.moveTo(offsetX, offsetY);
+                };
+
+                const draw = (e) => {
+                    if (!isDrawing) return;
+                    const { offsetX, offsetY } = e.nativeEvent;
+                    ctx.lineTo(offsetX, offsetY);
+                    ctx.stroke();
+                };
+
+                const stopDrawing = () => {
+                    isDrawing = false;
+                    ctx.closePath();
+                };
+
+                const handleTouchStart = (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const rect = canvas.getBoundingClientRect();
+                    const offsetX = touch.clientX - rect.left;
+                    const offsetY = touch.clientY - rect.top;
+                    ctx.beginPath();
+                    ctx.moveTo(offsetX, offsetY);
+                    isDrawing = true;
+                };
+
+                const handleTouchMove = (e) => {
+                    e.preventDefault();
+                    if (!isDrawing) return;
+                    const touch = e.touches[0];
+                    const rect = canvas.getBoundingClientRect();
+                    const offsetX = touch.clientX - rect.left;
+                    const offsetY = touch.clientY - rect.top;
+                    ctx.lineTo(offsetX, offsetY);
+                    ctx.stroke();
+                };
+
+                canvas.addEventListener('mousedown', startDrawing);
+                canvas.addEventListener('mousemove', draw);
+                canvas.addEventListener('mouseup', stopDrawing);
+                canvas.addEventListener('mouseout', stopDrawing);
+                canvas.addEventListener('touchstart', handleTouchStart);
+                canvas.addEventListener('touchmove', handleTouchMove);
+                canvas.addEventListener('touchend', stopDrawing);
+
+                return () => {
+                    canvas.removeEventListener('mousedown', startDrawing);
+                    canvas.removeEventListener('mousemove', draw);
+                    canvas.removeEventListener('mouseup', stopDrawing);
+                    canvas.removeEventListener('mouseout', stopDrawing);
+                    canvas.removeEventListener('touchstart', handleTouchStart);
+                    canvas.removeEventListener('touchmove', handleTouchMove);
+                    canvas.removeEventListener('touchend', stopDrawing);
+                };
+            }, []);
+
+            const clearCanvas = () => {
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            };
+
+            return (
+                <div class="mb-4">
+                    <p class="mb-2">Draw your signature below (touch or mouse):</p>
+                    <canvas
+                        ref={canvasRef}
+                        width="400"
+                        height="150"
+                        class="border rounded w-full"
+                    ></canvas>
+                    <button
+                        onClick={clearCanvas}
+                        class="mt-2 bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                    >
+                        Clear Signature
+                    </button>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [step, setStep] = useState(1);
+            const totalSteps = 7;
+
+            const handleNext = () => {
+                if (step < totalSteps) setStep(step + 1);
+                else alert('Application Submitted! Processing $50 fee and initiating checks.');
+            };
+
+            const handleBack = () => {
+                if (step > 1) setStep(step - 1);
+            };
+
+            return (
+                <div>
+                    {step === 1 && (
+                        <FunnelStep
+                            title="Applicant Information"
+                            step={1}
+                            totalSteps={totalSteps}
+                            onNext={handleNext}
+                            onBack={handleBack}
+                        >
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Full Name" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Social Security Number" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Email Address" type="email" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Date of Birth (MM/DD/YYYY)" type="date" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Phone Number" type="tel" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Move-In Date (MM/DD/YYYY)" type="date" required />
+                        </FunnelStep>
+                    )}
+                    {step === 2 && (
+                        <FunnelStep
+                            title="Residential History"
+                            step={2}
+                            totalSteps={totalSteps}
+                            onNext={handleNext}
+                            onBack={handleBack}
+                        >
+                            <h3 class="text-lg font-semibold mb-2">Current Address</h3>
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Street" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="City" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="State" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Monthly Rent/Mortgage" type="number" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Landlord Name" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Landlord Contact Number" type="tel" required />
+                        </FunnelStep>
+                    )}
+                    {step === 3 && (
+                        <FunnelStep
+                            title="Employment Information"
+                            step={3}
+                            totalSteps={totalSteps}
+                            onNext={handleNext}
+                            onBack={handleBack}
+                        >
+                            <h3 class="text-lg font-semibold mb-2">Current Employer</h3>
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Company Name" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Employer Address" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Phone Number" type="tel" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Monthly Income (Gross)" type="number" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Job Title" required />
+                        </FunnelStep>
+                    )}
+                    {step === 4 && (
+                        <FunnelStep
+                            title="Financial Information"
+                            step={4}
+                            totalSteps={totalSteps}
+                            onNext={handleNext}
+                            onBack={handleBack}
+                        >
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Bank Name" required />
+                            <select class="w-full p-2 mb-2 border rounded" required>
+                                <option value="">Bank Account Type</option>
+                                <option value="Checking">Checking</option>
+                                <option value="Savings">Savings</option>
+                            </select>
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Approx. Balance" type="number" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Other Income Sources" />
+                        </FunnelStep>
+                    )}
+                    {step === 5 && (
+                        <FunnelStep
+                            title="References"
+                            step={5}
+                            totalSteps={totalSteps}
+                            onNext={handleNext}
+                            onBack={handleBack}
+                        >
+                            <h3 class="text-lg font-semibold mb-2">Personal Reference 1</h3>
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Name" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Relationship" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Phone Number" type="tel" required />
+                            <h3 class="text-lg font-semibold mb-2 mt-4">Personal Reference 2</h3>
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Name" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Relationship" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Phone Number" type="tel" required />
+                        </FunnelStep>
+                    )}
+                    {step === 6 && (
+                        <FunnelStep
+                            title="Authorization and Declarations"
+                            step={6}
+                            totalSteps={totalSteps}
+                            onNext={handleNext}
+                            onBack={handleBack}
+                        >
+                            <label class="block mb-2">
+                                Have you ever been evicted?
+                                <select class="w-full p-2 border rounded" required>
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                </select>
+                            </label>
+                            <textarea class="w-full p-2 mb-2 border rounded" placeholder="If Yes, explain"></textarea>
+                            <label class="block mb-2">
+                                Have you ever declared bankruptcy?
+                                <select class="w-full p-2 border rounded" required>
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                </select>
+                            </label>
+                            <textarea class="w-full p-2 mb-2 border rounded" placeholder="If Yes, explain"></textarea>
+                        </FunnelStep>
+                    )}
+                    {step === 7 && (
+                        <FunnelStep
+                            title="Consent and Payment"
+                            step={7}
+                            totalSteps={totalSteps}
+                            onNext={handleNext}
+                            onBack={handleBack}
+                        >
+                            <p class="mb-4">
+                                By submitting, you authorize credit and background checks. A $50 non-refundable fee is required.
+                            </p>
+                            <SignatureCanvas />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Signature Date (MM/DD/YYYY)" type="date" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Initials (2 letters)" maxLength="2" required />
+                            <input class="w-full p-2 mb-2 border rounded" placeholder="Verification (Type 'AGREED')" required />
+                            <p class="text-sm text-gray-500 mt-4">
+                                Secure payment processing. Compliant with Illinois and Fair Housing Act.
+                            </p>
+                        </FunnelStep>
+                    )}
+                </div>
+            );
+        };
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
